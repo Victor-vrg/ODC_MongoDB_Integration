@@ -1,0 +1,38 @@
+# Common .NET Ignore Patterns
+bin/
+obj/
+.suo
+.ntvs*
+*.njsproj
+*.sln
+*.csproj
+*.dll
+*.exe
+*.pdb
+*.nupkg
+*.msbuild
+
+# Build Artifacts
+publish/
+*.nupkg
+
+# Temporary Files
+*.cache
+*.tmp
+
+# IDE Settings
+.idea/
+.vscode/
+*.sln.docstates
+
+# Project Specific Ignores
+!MongoDB_Integration.csproj
+!MongoDB_Integration.sln
+
+# Include necessary files
+!resources/
+!helpers/
+!structures/
+!guide_mongodb_integration.md
+!DEV_Guide_MongoDB_Integration.md
+!AI_Development_Guide.md
