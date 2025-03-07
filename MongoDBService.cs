@@ -172,12 +172,12 @@ namespace MongoDB_ODC
             }
         }
 
-        public ApiResponse GetCollectionStats(MongoConfig config, string collectionName)
+        public ApiResponse GetCollectionStats(MongoConfig config)
         {
             try
             {
                 var database = GetDatabase(config);
-                var command = new BsonDocument { { "collStats", collectionName } };
+                var command = new BsonDocument { { "collStats", config.CollectionName } };
                 var stats = database.RunCommand<BsonDocument>(command);
                 
                 return new ApiResponse { 
@@ -210,6 +210,67 @@ namespace MongoDB_ODC
             }
         }
 
+        public ApiResponse GetDocumentById(MongoConfig config, string id)
+        {
+            try
+            {
+                var database = GetDatabase(config);
+                var collection = database.GetCollection<BsonDocument>(config.CollectionName);
+                var document = collection.Find(x => x["_id"] == id).FirstOrDefault();
+                
+                return new ApiResponse { 
+                    Success = true, 
+                    Data = document.ToJson() 
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ApiResponse { Success = false, Message = $"GetDocumentById failed: {ex.Message}" };
+            }
+        }
+
+     //   create function CountDocuments 
+        public ApiResponse CountDocuments(MongoConfig config, string filterJson, bool explain)
+        {
+            try
+            {
+                var database = GetDatabase(config);
+                var collection = database.GetCollection<BsonDocument>(config.CollectionName);
+                var filter = string.IsNullOrEmpty(filterJson) 
+                    ? FilterDefinition<BsonDocument>.Empty 
+                    : new JsonFilterDefinition<BsonDocument>(filterJson);
+                
+                var count = collection.CountDocuments(filter);
+                return new ApiResponse { 
+                    Success = true, 
+                    Data = explain ? count.ToJson() : count.ToString() 
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ApiResponse { Success = false, Message = $"CountDocuments failed: {ex.Message}" };
+            }
+        }
+
+        public ApiResponse IsDocumentExist(MongoConfig config, string filterJson)
+        {
+            try
+            {
+                var database = GetDatabase(config);
+                var collection = database.GetCollection<BsonDocument>(config.CollectionName);
+                var filter = new JsonFilterDefinition<BsonDocument>(filterJson);
+                
+                var document = collection.Find(filter).FirstOrDefault();
+                return new ApiResponse { 
+                    Success = document != null, 
+                    Data = document?.ToJson() 
+                };
+            }
+            catch (Exception ex)
+            {
+                return new ApiResponse { Success = false, Message = $"IsDocumentExist failed: {ex.Message}" };
+            }   
+        }
         private IMongoDatabase GetDatabase(MongoConfig config)
         {
             var client = new MongoClient(config.ConnectionString);

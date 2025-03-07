@@ -6,6 +6,7 @@ namespace MongoDB_ODC
     [OSInterface(Description = "Interface for MongoDB operations integrated with OutSystems", Name = "MongoDB_Conector", IconResourceName = "MongoDB_Integration.resources.mongodb.ico")]
     public interface IMongoDB
     {
+        // stateless. Any state or context needed to execute the external library should be passed explicitly as an input parameter.
         // usamos o MongoConfig e outros arquivos de /structures para receber os parâmetros de configuração do banco de dados ele e uma structure com decoratos para outystems, contem dados como ConnectionString, databaseName, collectionName
         [OSAction(Description = "Creates a document in the specified MongoDB collection")]
         ApiResponse CreateDocument(
@@ -47,12 +48,28 @@ namespace MongoDB_ODC
 
         [OSAction(Description = "Retrieves statistics for a MongoDB collection")]
         ApiResponse GetCollectionStats(
-            [OSParameter(Description = "Mongo Configuration")] MongoConfig config,  
-            [OSParameter(Description = "Name of the collection to get stats for")] string collectionName);
+            [OSParameter(Description = "Mongo Configuration")] MongoConfig config);
 
         [OSAction(Description = "Retrieves index information for a MongoDB collection")]
         ApiResponse GetIndexInfo(
             [OSParameter(Description = "Mongo Configuration")] MongoConfig config);
+
+        [OSAction(Description = "Retrieves a document by its ID from a MongoDB collection")]
+        ApiResponse GetDocumentById(
+            [OSParameter(Description = "Mongo Configuration")] MongoConfig config,  
+            [OSParameter(Description = "ID of the document to retrieve")] string documentId);
+
+        
+        [OSAction(Description = "Retrieves the number of documents in a MongoDB collection")]
+        ApiResponse CountDocuments(
+            [OSParameter(Description = "Mongo Configuration")] MongoConfig config,  
+            [OSParameter(Description = "JSON filter for documents. ex: { name: 'John' }")] string filterJson,
+            [OSParameter(Description = "explain")] bool explain);
+
+    
+        [OSAction(Description = "Checks if a document exists in a MongoDB collection")]
+        ApiResponse IsDocumentExist(
+            [OSParameter(Description = "Mongo Configuration")] MongoConfig config,  
+            [OSParameter(Description = "JSON filter for documents. ex: { name: 'John' }")] string filterJson);  
     }
 }
-

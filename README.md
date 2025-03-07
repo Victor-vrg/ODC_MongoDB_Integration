@@ -82,7 +82,6 @@ public class STR_ApiResponse {
 
 - Follow .NET coding standards
 - Use meaningful variable names
-- Implement XML comments
 - Regularly review and refactor code
 - Ensure proper disposal of resources
 
