@@ -1,156 +1,101 @@
-# MongoDB Integration Guide for .NET 8.0 Developers
+# MongoDB OutSystems Connector (ODC)
+
+[![.NET 8.0](https://img.shields.io/badge/.NET-8.0-purple.svg)](https://dotnet.microsoft.com)
+[![MongoDB](https://img.shields.io/badge/MongoDB-7.0-green.svg)](https://www.mongodb.com)
+[![MongoDB.Driver 3.2.1](https://img.shields.io/badge/MongoDB.Driver-3.2.1-blue.svg)](https://www.nuget.org/packages/MongoDB.Driver/3.2.1)
+[![OutSystems ODC](https://img.shields.io/badge/OutSystems-ODC-red.svg)](https://www.outsystems.com/low-code-platform/developer-cloud/)
+[![OutSystems.ExternalLibraries.SDK 1.5.0](https://img.shields.io/badge/OutSystems.ExternalLibraries.SDK-1.5.0-blue.svg)](https://www.nuget.org/packages/OutSystems.ExternalLibraries.SDK/1.5.0)
+
+
+A production-ready integration layer enabling OutSystems applications to interact with MongoDB using .NET 8. Implements stateless operations following OutSystems ODC best practices.
+
+## Key Features
+
+- 🚀 **Full CRUD Operations** with JSON input/output
+- 📊 **Aggregation Pipeline** support with explain plans
+- ⚡ **Connection Pooling** with TLS/SSL configuration
+- 📑 **Pagination** & Document Counting
+- 🔍 **Collection Statistics** & Index Management
+- 🛡️ **Enterprise-Grade Security** with configurable TLS
+
+## Implementation Overview
+
+```tree
+MongoDB_ODC/
+├── IMongoDB.cs            # Interface with ODC attributes
+├── MongoDBService.cs      # Core MongoDB operations
+├── Structures/
+│   ├── MongoConfig.cs     # Connection config: { ConnectionString, DatabaseName, CollectionName }
+│   └── MongoDBResponse.cs # Standard response { Success, Message, Data }
+└── Helpers/
+    ├── JsonHelper.cs      # BSON/JSON conversions
+    └── QueryBuilder.cs    # Filter/Pipeline validation
+```
+
+## Core Operations Example
 
 >[!IMPORTANT]
 All functions must be stateless and receive their entire necessary context via input parameters.
 >
 
-## Project Structure
+![alt text](print/server-action-use.png)
 
-```tree
-MongoDB_Integration/
-├── IMongoDB.cs          # Main MongoDB integration interface
-├── MongoDBService.cs    # Core implementation of MongoDB operations
-├── helpers/            # Helper classes
-│   ├── JsonHelper.cs    # JSON serialization utilities
-│   └── MongoHelper.cs   # Auxiliary methods for MongoDB operations
-├── structures/          # Data structures for OutSystems integration
-│   ├── STR_MongoConfig.cs 
-│   └── STR_MongoDBConectorResponse.cs 
-└── resources/           # Static files and icons
-```
+## Critical Implementation Details
 
-## Integration Workflow
+### Connection Management
 
-### 1. Initial Setup
+#### OutSystems ODC Consumer Configuration
+
+In your OutSystems application, go to Portal > apps > you aplication> Configuration
+
+![alt text](print/correct_parse_connectionString.png)
 
 ```csharp
-public class STR_MongoConfig {
-    public string ConnectionString { get; set; }
-    public string DatabaseName { get; set; }
-    public string CollectionName { get; set; }
+private IMongoDatabase GetDatabase(MongoConfig config)
+{
+    var settings = MongoClientSettings.FromConnectionString(config.ConnectionString);
+    settings.MaxConnectionPoolSize = config.MaxPoolSize ?? 2;
+    settings.UseTls = config.UseSSL ?? true;
+    
+    return new MongoClient(settings).GetDatabase(config.DatabaseName);
 }
 ```
 
-### 2. Basic Operations
+- **Pooling**: Default 2 connections (configurable via `MaxPoolSize`)
+- **Security**: TLS enabled by default
+- **Stateless**: New client per request (ODC compliant)
+
+### Error Handling Pattern
 
 ```csharp
-public interface IMongoDB {
-    MongoDBConectorResponse InsertDocument(object document);
-    MongoDBConectorResponse FindDocument(FilterDefinition<BsonDocument> filter);
-    MongoDBConectorResponse UpdateDocument(object id, UpdateDefinition<BsonDocument> update);
+try {
+    // MongoDB operation
+    return new MongoDBResponse { Success = true, Data = results };
+}
+catch (MongoException ex) {
+    return new MongoDBResponse {
+        Success = false,
+        Message = $"DB Error: {ex.Message}",
+        Data = ex.ErrorLabels
+    };
 }
 ```
 
-### 3. Response Pattern
+## Performance Considerations
 
-```csharp
-public class STR_ApiResponse {
-    public bool Success { get; set; }
-    public string Message { get; set; }
-    public object Data { get; set; }
-}
-```
+1. **Indexing**: Use `GetIndexInfo()` to verify query coverage
+2. **Projection**: Filter document fields in aggregation pipelines
+3. **Batching**: Use `GetPagedDocuments(skip, limit)` for large datasets
+4. **Monitoring**: Check `GetCollectionStats()` for storage metrics
 
-## Best Practices
+## Recommended Resources
 
-1. **Connection Management**
+- [MongoDB .NET Driver Docs](https://mongodb.github.io/mongo-csharp-driver/)
+- [ODC External Libraries Guide](https://success.outsystems.com/documentation/outsystems_developer_cloud/building_apps/extend_your_apps_with_custom_code/external_libraries_sdk_readme/)
+- [MongoDB Performance Tuning](https://www.mongodb.com/docs/manual/core/performance-best-practices/)
 
-- Use connection pooling with `MongoClient`
-- Ensure proper disposal of client instances
-- Configure connection strings securely
-- Use `using` statements for proper resource management
+---
 
-2. **Query Optimization**
-
-- Use appropriate indexes for frequent queries
-- Avoid using `Find()` without filters
-- Implement pagination for large datasets
-- Optimize for statelessness required by ODC
-
-3. **Error Handling**
-
-- Implement try-catch blocks in all operations
-- Log detailed error information
-- Return meaningful error messages
-- Handle disposable objects properly
-
-4. **Security**
-
-- Use secure connection strings
-- Implement proper access controls
-- Avoid hardcoding sensitive data
-- Use environment variables for sensitive configurations
-
-5. **Code Quality**
-
-- Follow .NET coding standards
-- Use meaningful variable names
-- Regularly review and refactor code
-- Ensure proper disposal of resources
-
-6. **Testing**
-
-- Write unit tests for all operations
-- Use mocking for dependencies
-- Test error handling scenarios
-- Validate performance under load
-- Ensure compliance with ODC best practices
-
-7. **Documentation**
-
-- Maintain up-to-date documentation
-- Include code examples
-- Document error handling
-- Provide troubleshooting guides
-- Document ODC specific considerations
-
-8. **ODC Specific Considerations**
-
-- Design for statelessness
-- Manage latency in ODC calls
-- Ensure independence from app context
-- Properly dispose of resources
-- Avoid async/await patterns
-
-## Advanced Topics
-
-### Aggregation Framework
-
-- Use aggregation for complex queries
-- Optimize pipeline stages
-- Use explain() to analyze query performance
-
-### Index Management
-
-- Create appropriate indexes
-- Monitor query performance
-- Remove unused indexes
-
-### Backup & Recovery
-
-- Schedule regular backups
-- Test backup restoration
-- Implement disaster recovery plans
-
-
-## Official Documentation Links
-
-Here are some valuable resources for official documentation that can help you deepen your understanding and improve your integration with MongoDB and .NET:
-
-- [MongoDB Documentation](https://docs.mongodb.com): Comprehensive guide to using MongoDB, including tutorials, installation guides, and best practices.
-- [MongoDB .NET Driver Documentation](https://www.mongodb.com/pt-br/docs/drivers/csharp/current/): Official documentation for the MongoDB .NET Driver, providing detailed API references and usage examples.
-- [Microsoft .NET Documentation](https://docs.microsoft.com/en-us/dotnet/): Extensive resources for .NET, including API documentation, coding guides, and technical articles.
-- [OutSystems External Libraries Documentation](https://success.outsystems.com/documentation/outsystems_developer_cloud/building_apps/extend_your_apps_with_custom_code/): Official documentation for integrating external libraries with OutSystems, providing guidelines and examples.
-
-
-## Conclusion
-
-This guide provides a comprehensive approach to integrating MongoDB with .NET applications. By following these best practices and patterns, developers can build robust, scalable, and maintainable solutions.
-
-
-## Author and Badges
-
-This guide was created by [Victor Resende Gualberto](https://www.linkedin.com/in/victorvrg/).
-
-[![MongoDB](https://img.shields.io/badge/MongoDB-47A248?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
-[![OutSystems ODC](https://img.shields.io/badge/OutSystems-ODC-blue?style=for-the-badge&logo=outsystems&logoColor=white)](https://www.outsystems.com/odc/)
+🔧 **Maintained by**: [Victor Resende](https://linkedin.com/in/victorvrg)  
+📦 **NuGet**: `Install-Package MongoDB.ODC.Integration`  
+🐛 **Issue Tracking**: GitHub Issues
