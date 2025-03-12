@@ -15,7 +15,7 @@ MongoDB_Integration/
 │   └── MongoHelper.cs   # Auxiliary methods for MongoDB operations
 ├── structures/          # Data structures for OutSystems integration
 │   ├── STR_MongoConfig.cs 
-│   └── STR_ApiResponse.cs 
+│   └── STR_MongoDBConectorResponse.cs 
 └── resources/           # Static files and icons
 ```
 
