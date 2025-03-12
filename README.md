@@ -1,5 +1,9 @@
 # MongoDB Integration Guide for .NET 8.0 Developers
 
+>[!IMPORTANT]
+All functions must be stateless and receive their entire necessary context via input parameters.
+>
+
 ## Project Structure
 
 ```tree
@@ -31,9 +35,9 @@ public class STR_MongoConfig {
 
 ```csharp
 public interface IMongoDB {
-    STR_ApiResponse InsertDocument(object document);
-    STR_ApiResponse FindDocument(FilterDefinition<BsonDocument> filter);
-    STR_ApiResponse UpdateDocument(object id, UpdateDefinition<BsonDocument> update);
+    MongoDBConectorResponse InsertDocument(object document);
+    MongoDBConectorResponse FindDocument(FilterDefinition<BsonDocument> filter);
+    MongoDBConectorResponse UpdateDocument(object id, UpdateDefinition<BsonDocument> update);
 }
 ```
 
@@ -44,7 +48,6 @@ public class STR_ApiResponse {
     public bool Success { get; set; }
     public string Message { get; set; }
     public object Data { get; set; }
-    public int StatusCode { get; set; }
 }
 ```
 
