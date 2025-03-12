@@ -3,7 +3,7 @@
 namespace MongoDB_ODC
 {
     [OSStructure(Description = "Resposta padrão da API")]
-    public struct ApiResponse
+    public struct MongoDBConectorResponse
     {
         [OSStructureField(
             DataType = OSDataType.Boolean,
@@ -26,7 +26,7 @@ namespace MongoDB_ODC
         )]
         public string Data { get; set; } // Propriedade com get/set
     // esse padrão e melhor para lidar no outsytems recebendo o objeto via string para deserializar lá
-   public ApiResponse(bool success, string message, string? data = null)
+   public MongoDBConectorResponse(bool success, string message, string? data = null)
 {
     Success = success;
     Message = message;

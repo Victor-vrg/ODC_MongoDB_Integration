@@ -1,5 +1,4 @@
 using OutSystems.ExternalLibraries.SDK;
-using MongoDB.Driver;
 
 namespace MongoDB_ODC 
 {
@@ -30,7 +29,7 @@ namespace MongoDB_ODC
             string collectionName,
             int? maxPoolSize = null,
             int? connectTimeout = 30,
-            bool? useSSL = false)
+            bool? useSSL = true)
         {
             ConnectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
             DatabaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
