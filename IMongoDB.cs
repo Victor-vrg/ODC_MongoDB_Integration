@@ -3,7 +3,16 @@ using OutSystems.ExternalLibraries.SDK;
 
 namespace MongoDB_ODC
 {
-    [OSInterface(Description = "Interface for MongoDB operations integrated with OutSystems", Name = "MongoDB_Conector", IconResourceName = "MongoDB_Integration.resources.mongodb.ico")]
+    [OSInterface(Description = @"MongoDB Connector for OutSystems (Unofficial) 
+Integrate MongoDB with OutSystems apps via streamlined CRUD operations, advanced queries, and config-driven workflows.
+
+CRUD & Pagination: Create, read, update, delete documents; fetch data in batches.
+
+Aggregation Framework: Run complex pipelines (grouping, filtering) and analyze performance.
+
+Config-Driven: Securely manage connections (MongoConfig) for stateless, scalable operations.
+
+Ideal for dynamic apps, data analysis, and large dataset management. 🚀", Name = "MongoDB_Conector", IconResourceName = "MongoDB_Integration.resources.mongodb.ico")]
     public interface IMongoDB
     {
         // stateless. Any state or context needed to execute the external library should be passed explicitly as an input parameter.

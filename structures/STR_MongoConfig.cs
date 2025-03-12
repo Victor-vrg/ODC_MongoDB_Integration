@@ -34,7 +34,7 @@ namespace MongoDB_ODC
             ConnectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
             DatabaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
             CollectionName = collectionName;
-            MaxPoolSize = maxPoolSize;
+            MaxPoolSize = maxPoolSize >= 1 ? maxPoolSize : throw new ArgumentOutOfRangeException(nameof(maxPoolSize), "MaxPoolSize must be 1 or greater.");
             ConnectTimeout = connectTimeout;
             UseSSL = useSSL;
         }
