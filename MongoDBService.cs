@@ -271,10 +271,14 @@ namespace MongoDB_ODC
                 return new ApiResponse { Success = false, Message = $"IsDocumentExist failed: {ex.Message}" };
             }   
         }
-        private IMongoDatabase GetDatabase(MongoConfig config)
-        {
-            var client = new MongoClient(config.ConnectionString);
-            return client.GetDatabase(config.DatabaseName);
-        }
+private IMongoDatabase GetDatabase(MongoConfig config)
+{
+    var settings = MongoClientSettings.FromConnectionString(config.ConnectionString);
+    settings.MaxConnectionPoolSize = config.MaxPoolSize ?? 2;
+    settings.UseTls = config.UseSSL ?? true;
+    
+    var client = new MongoClient(settings);
+    return client.GetDatabase(config.DatabaseName);
+}
     }
 }
