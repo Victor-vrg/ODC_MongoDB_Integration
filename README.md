@@ -54,14 +54,14 @@ In your OutSystems application, go to Portal > apps > you aplication> Configurat
 private IMongoDatabase GetDatabase(MongoConfig config)
 {
     var settings = MongoClientSettings.FromConnectionString(config.ConnectionString);
-    settings.MaxConnectionPoolSize = config.MaxPoolSize ?? 2;
+    settings.MaxConnectionPoolSize = config.MaxPoolSize ?? 100;
     settings.UseTls = config.UseSSL ?? true;
     
     return new MongoClient(settings).GetDatabase(config.DatabaseName);
 }
 ```
 
-- **Pooling**: Default 2 connections (configurable via `MaxPoolSize`)
+- **Pooling**: Default 100 connections (configurable via `MaxPoolSize`)
 - **Security**: TLS enabled by default
 - **Stateless**: New client per request (ODC compliant)
 

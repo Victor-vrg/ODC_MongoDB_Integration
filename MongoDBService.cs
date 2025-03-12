@@ -29,10 +29,10 @@ namespace MongoDB_ODC
             {
                 var database = GetDatabase(config);
                 var collection = database.GetCollection<BsonDocument>(config.CollectionName);
-                var filter = string.IsNullOrEmpty(filterJson) 
-                    ? FilterDefinition<BsonDocument>.Empty 
+                var filter = string.IsNullOrEmpty(filterJson)
+                    ? FilterDefinition<BsonDocument>.Empty
                     : new JsonFilterDefinition<BsonDocument>(filterJson);
-                
+
                 var documents = collection.Find(filter).ToList();
                 return new MongoDBConectorResponse { Success = true, Data = JsonHelper.ConvertBsonToJson(documents) };
             }
@@ -79,11 +79,12 @@ namespace MongoDB_ODC
                 var collection = database.GetCollection<object>(config.CollectionName);
                 var filter = new JsonFilterDefinition<object>(filterJson);
                 var update = new JsonUpdateDefinition<object>(updateJson);
-                
+
                 var result = collection.UpdateOne(filter, update);
-                return new MongoDBConectorResponse { 
-                    Success = result.IsAcknowledged, 
-                    Message = $"Modified {result.ModifiedCount} documents" 
+                return new MongoDBConectorResponse
+                {
+                    Success = result.IsAcknowledged,
+                    Message = $"Modified {result.ModifiedCount} documents"
                 };
             }
             catch (Exception ex)
@@ -99,11 +100,12 @@ namespace MongoDB_ODC
                 var database = GetDatabase(config);
                 var collection = database.GetCollection<object>(config.CollectionName);
                 var filter = new JsonFilterDefinition<object>(filterJson);
-                
+
                 var result = collection.DeleteOne(filter);
-                return new MongoDBConectorResponse { 
-                    Success = result.IsAcknowledged, 
-                    Message = $"Deleted {result.DeletedCount} documents" 
+                return new MongoDBConectorResponse
+                {
+                    Success = result.IsAcknowledged,
+                    Message = $"Deleted {result.DeletedCount} documents"
                 };
             }
             catch (Exception ex)
@@ -179,10 +181,11 @@ namespace MongoDB_ODC
                 var database = GetDatabase(config);
                 var command = new BsonDocument { { "collStats", config.CollectionName } };
                 var stats = database.RunCommand<BsonDocument>(command);
-                
-                return new MongoDBConectorResponse { 
-                    Success = true, 
-                    Data = stats.ToJson() 
+
+                return new MongoDBConectorResponse
+                {
+                    Success = true,
+                    Data = stats.ToJson()
                 };
             }
             catch (Exception ex)
@@ -198,10 +201,11 @@ namespace MongoDB_ODC
                 var database = GetDatabase(config);
                 var collection = database.GetCollection<BsonDocument>(config.CollectionName);
                 var indexes = collection.Indexes.List().ToList();
-                
-                return new MongoDBConectorResponse { 
-                    Success = true, 
-                    Data = indexes.ToJson() 
+
+                return new MongoDBConectorResponse
+                {
+                    Success = true,
+                    Data = indexes.ToJson()
                 };
             }
             catch (Exception ex)
@@ -217,10 +221,11 @@ namespace MongoDB_ODC
                 var database = GetDatabase(config);
                 var collection = database.GetCollection<BsonDocument>(config.CollectionName);
                 var document = collection.Find(x => x["_id"] == id).FirstOrDefault();
-                
-                return new MongoDBConectorResponse { 
-                    Success = true, 
-                    Data = document.ToJson() 
+
+                return new MongoDBConectorResponse
+                {
+                    Success = true,
+                    Data = document.ToJson()
                 };
             }
             catch (Exception ex)
@@ -229,26 +234,27 @@ namespace MongoDB_ODC
             }
         }
 
-     //   create function CountDocuments 
+        //   create function CountDocuments 
         public MongoDBConectorResponse CountDocuments(MongoConfig config, string filterJson, bool explain)
         {
             try
             {
                 var database = GetDatabase(config);
                 var collection = database.GetCollection<BsonDocument>(config.CollectionName);
-                var filter = string.IsNullOrEmpty(filterJson) 
-                    ? FilterDefinition<BsonDocument>.Empty 
+                var filter = string.IsNullOrEmpty(filterJson)
+                    ? FilterDefinition<BsonDocument>.Empty
                     : new JsonFilterDefinition<BsonDocument>(filterJson);
-                
+
                 var count = collection.CountDocuments(filter);
-                return new MongoDBConectorResponse { 
-                    Success = true, 
-                    Data = explain ? count.ToJson() : count.ToString() 
+                return new MongoDBConectorResponse
+                {
+                    Success = true,
+                    Data = explain ? count.ToJson() : count.ToString()
                 };
             }
             catch (Exception ex)
             {
-                return new MongoDBConectorResponse { Success = false, Message = $"CountDocuments failed: {ex.Message}" };
+                return new MongoDBConectorResponse { Success = false, Message = $" CountDocuments failed: {ex.Message}" };
             }
         }
 
@@ -259,7 +265,7 @@ namespace MongoDB_ODC
                 var database = GetDatabase(config);
                 var collection = database.GetCollection<BsonDocument>(config.CollectionName);
                 var filter = new JsonFilterDefinition<BsonDocument>(filterJson);
-                
+
                 var document = collection.Find(filter).FirstOrDefault();
                 return new MongoDBConectorResponse
                 {
@@ -270,16 +276,41 @@ namespace MongoDB_ODC
             catch (Exception ex)
             {
                 return new MongoDBConectorResponse { Success = false, Message = $"IsDocumentExist failed: {ex.Message}" };
-            }   
+            }
         }
-private IMongoDatabase GetDatabase(MongoConfig config)
-{
-    var settings = MongoClientSettings.FromConnectionString(config.ConnectionString);
-    settings.MaxConnectionPoolSize = config.MaxPoolSize ?? 2;
-    settings.UseTls = config.UseSSL ?? true;
-    
-    var client = new MongoClient(settings);
-    return client.GetDatabase(config.DatabaseName);
-}
+
+        /// <summary>
+        /// Establishes a connection to a MongoDB database using the provided configuration settings.
+        /// </summary>
+        /// <param name="config">An instance of MongoConfig containing connection details such as
+        /// connection string, database name, connection timeout, pool size, and SSL usage.</param>
+        /// <returns>An IMongoDatabase instance representing the connected database.</returns>
+        /// <remarks>
+        /// This method sets various connection settings, including server selection timeout, 
+        /// connection timeout, maximum connection pool size, and TLS usage. A new MongoClient 
+        /// is created for each request, ensuring stateless operations.
+        /// </remarks>
+
+        private IMongoDatabase GetDatabase(MongoConfig config)
+        {
+            var settings = MongoClientSettings.FromConnectionString(config.ConnectionString);
+
+
+            settings.ServerSelectionTimeout = TimeSpan.FromSeconds(
+        config.ConnectTimeout.HasValue && config.ConnectTimeout.Value > 0
+            ? config.ConnectTimeout.Value
+            : 60
+    );
+            settings.ConnectTimeout = settings.ServerSelectionTimeout;
+
+            settings.MaxConnectionPoolSize = (config.MaxPoolSize.HasValue && config.MaxPoolSize.Value >= 1)
+                ? config.MaxPoolSize.Value
+        : 100;
+            settings.UseTls = config.UseSSL ?? true;
+
+            var client = new MongoClient(settings);
+            return client.GetDatabase(config.DatabaseName);
+        }
+
     }
 }

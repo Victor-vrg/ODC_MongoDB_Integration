@@ -20,21 +20,21 @@ namespace MongoDB_ODC
         [OSStructureField(DataType = OSDataType.Integer, Description = "Timeout de conexão em segundos", IsMandatory = false)]
         public int? ConnectTimeout { get; set; }
 
-        [OSStructureField(DataType = OSDataType.Boolean, Description = "Habilita SSL", IsMandatory = false)]
+        [OSStructureField(DataType = OSDataType.Boolean, Description = "Habilita SSL", IsMandatory = false, DefaultValue = "True")]
         public bool? UseSSL { get; set; }
 
         public MongoConfig(
             string connectionString,
             string databaseName,
             string collectionName,
-            int? maxPoolSize = null,
-            int? connectTimeout = 30,
+            int? maxPoolSize = 100,
+            int? connectTimeout = 60,
             bool? useSSL = true)
         {
             ConnectionString = connectionString ?? throw new ArgumentNullException(nameof(connectionString));
             DatabaseName = databaseName ?? throw new ArgumentNullException(nameof(databaseName));
-            CollectionName = collectionName;
-            MaxPoolSize = maxPoolSize >= 1 ? maxPoolSize : throw new ArgumentOutOfRangeException(nameof(maxPoolSize), "MaxPoolSize must be 1 or greater.");
+            CollectionName = collectionName ?? throw new ArgumentNullException(nameof(collectionName));
+            MaxPoolSize = maxPoolSize.HasValue && maxPoolSize.Value >= 1 ? maxPoolSize : 60;
             ConnectTimeout = connectTimeout;
             UseSSL = useSSL;
         }
