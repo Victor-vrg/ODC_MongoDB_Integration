@@ -7,7 +7,7 @@ namespace MongoDB_ODC
 {
     public class MongoDBService : IMongoDB
     {
-        public ApiResponse CreateDocument(MongoConfig config, string documentJson)
+        public MongoDBConectorResponse CreateDocument(MongoConfig config, string documentJson)
         {
             try
             {
@@ -15,15 +15,15 @@ namespace MongoDB_ODC
                 var collection = database.GetCollection<BsonDocument>(config.CollectionName);
                 var document = BsonDocument.Parse(documentJson);
                 collection.InsertOne(document);
-                return new ApiResponse { Success = true, Message = "Document created successfully" };
+                return new MongoDBConectorResponse { Success = true, Message = "Document created successfully" };
             }
             catch (Exception ex)
             {
-                return new ApiResponse { Success = false, Message = $"Create failed: {ex.Message}" };
+                return new MongoDBConectorResponse { Success = false, Message = $"Create failed: {ex.Message}" };
             }
         }
 
-        public ApiResponse GetDocuments(MongoConfig config, string filterJson)
+        public MongoDBConectorResponse GetDocuments(MongoConfig config, string filterJson)
         {
             try
             {
@@ -34,15 +34,15 @@ namespace MongoDB_ODC
                     : new JsonFilterDefinition<BsonDocument>(filterJson);
                 
                 var documents = collection.Find(filter).ToList();
-                return new ApiResponse { Success = true, Data = JsonHelper.ConvertBsonToJson(documents) };
+                return new MongoDBConectorResponse { Success = true, Data = JsonHelper.ConvertBsonToJson(documents) };
             }
             catch (Exception ex)
             {
-                return new ApiResponse { Success = false, Message = $"Query failed: {ex.Message}" };
+                return new MongoDBConectorResponse { Success = false, Message = $"Query failed: {ex.Message}" };
             }
         }
 
-        public ApiResponse GetPagedDocuments(MongoConfig config, int skip, int limit)
+        public MongoDBConectorResponse GetPagedDocuments(MongoConfig config, int skip, int limit)
         {
             try
             {
@@ -54,7 +54,7 @@ namespace MongoDB_ODC
                                           .Limit(limit)
                                           .ToList();
 
-                return new ApiResponse
+                return new MongoDBConectorResponse
                 {
                     Success = true,
                     Data = JsonHelper.ConvertBsonToJson(documents)
@@ -62,7 +62,7 @@ namespace MongoDB_ODC
             }
             catch (Exception ex)
             {
-                return new ApiResponse
+                return new MongoDBConectorResponse
                 {
                     Success = false,
                     Message = $"getPagedDocuments failed: {ex.Message}"
@@ -71,7 +71,7 @@ namespace MongoDB_ODC
         }
 
 
-        public ApiResponse UpdateDocument(MongoConfig config, string filterJson, string updateJson)
+        public MongoDBConectorResponse UpdateDocument(MongoConfig config, string filterJson, string updateJson)
         {
             try
             {
@@ -81,18 +81,18 @@ namespace MongoDB_ODC
                 var update = new JsonUpdateDefinition<object>(updateJson);
                 
                 var result = collection.UpdateOne(filter, update);
-                return new ApiResponse { 
+                return new MongoDBConectorResponse { 
                     Success = result.IsAcknowledged, 
                     Message = $"Modified {result.ModifiedCount} documents" 
                 };
             }
             catch (Exception ex)
             {
-                return new ApiResponse { Success = false, Message = $"Update failed: {ex.Message}" };
+                return new MongoDBConectorResponse { Success = false, Message = $"Update failed: {ex.Message}" };
             }
         }
 
-        public ApiResponse DeleteDocument(MongoConfig config, string filterJson)
+        public MongoDBConectorResponse DeleteDocument(MongoConfig config, string filterJson)
         {
             try
             {
@@ -101,19 +101,19 @@ namespace MongoDB_ODC
                 var filter = new JsonFilterDefinition<object>(filterJson);
                 
                 var result = collection.DeleteOne(filter);
-                return new ApiResponse { 
+                return new MongoDBConectorResponse { 
                     Success = result.IsAcknowledged, 
                     Message = $"Deleted {result.DeletedCount} documents" 
                 };
             }
             catch (Exception ex)
             {
-                return new ApiResponse { Success = false, Message = $"Delete failed: {ex.Message}" };
+                return new MongoDBConectorResponse { Success = false, Message = $"Delete failed: {ex.Message}" };
             }
         }
 
 
-        public ApiResponse AggregateExplainer(MongoConfig config, string aggregatePipeline, bool verbose)
+        public MongoDBConectorResponse AggregateExplainer(MongoConfig config, string aggregatePipeline, bool verbose)
         {
             try
             {
@@ -131,7 +131,7 @@ namespace MongoDB_ODC
         };
 
                 var result = database.RunCommand<BsonDocument>(command);
-                return new ApiResponse
+                return new MongoDBConectorResponse
                 {
                     Success = true,
                     Data = result.ToJson()
@@ -139,7 +139,7 @@ namespace MongoDB_ODC
             }
             catch (Exception ex)
             {
-                return new ApiResponse
+                return new MongoDBConectorResponse
                 {
                     Success = false,
                     Message = $"Aggregate explain failed: {ex.Message}"
@@ -147,7 +147,7 @@ namespace MongoDB_ODC
             }
         }
 
-        public ApiResponse AggregateCollection(MongoConfig config, string aggregatePipeline)
+        public MongoDBConectorResponse AggregateCollection(MongoConfig config, string aggregatePipeline)
         {
             try
             {
@@ -156,7 +156,7 @@ namespace MongoDB_ODC
                 var pipeline = BsonSerializer.Deserialize<BsonDocument[]>(aggregatePipeline);
 
                 var results = collection.Aggregate<BsonDocument>(pipeline).ToList();
-                return new ApiResponse
+                return new MongoDBConectorResponse
                 {
                     Success = true,
                     Data = results.ToJson()
@@ -164,7 +164,7 @@ namespace MongoDB_ODC
             }
             catch (Exception ex)
             {
-                return new ApiResponse
+                return new MongoDBConectorResponse
                 {
                     Success = false,
                     Message = $"Aggregation failed: {ex.Message}"
@@ -172,7 +172,7 @@ namespace MongoDB_ODC
             }
         }
 
-        public ApiResponse GetCollectionStats(MongoConfig config)
+        public MongoDBConectorResponse GetCollectionStats(MongoConfig config)
         {
             try
             {
@@ -180,18 +180,18 @@ namespace MongoDB_ODC
                 var command = new BsonDocument { { "collStats", config.CollectionName } };
                 var stats = database.RunCommand<BsonDocument>(command);
                 
-                return new ApiResponse { 
+                return new MongoDBConectorResponse { 
                     Success = true, 
                     Data = stats.ToJson() 
                 };
             }
             catch (Exception ex)
             {
-                return new ApiResponse { Success = false, Message = $"GetCollectionStats failed: {ex.Message}" };
+                return new MongoDBConectorResponse { Success = false, Message = $"GetCollectionStats failed: {ex.Message}" };
             }
         }
 
-        public ApiResponse GetIndexInfo(MongoConfig config)
+        public MongoDBConectorResponse GetIndexInfo(MongoConfig config)
         {
             try
             {
@@ -199,18 +199,18 @@ namespace MongoDB_ODC
                 var collection = database.GetCollection<BsonDocument>(config.CollectionName);
                 var indexes = collection.Indexes.List().ToList();
                 
-                return new ApiResponse { 
+                return new MongoDBConectorResponse { 
                     Success = true, 
                     Data = indexes.ToJson() 
                 };
             }
             catch (Exception ex)
             {
-                return new ApiResponse { Success = false, Message = $"GetIndexInfo failed: {ex.Message}" };
+                return new MongoDBConectorResponse { Success = false, Message = $"GetIndexInfo failed: {ex.Message}" };
             }
         }
 
-        public ApiResponse GetDocumentById(MongoConfig config, string id)
+        public MongoDBConectorResponse GetDocumentById(MongoConfig config, string id)
         {
             try
             {
@@ -218,19 +218,19 @@ namespace MongoDB_ODC
                 var collection = database.GetCollection<BsonDocument>(config.CollectionName);
                 var document = collection.Find(x => x["_id"] == id).FirstOrDefault();
                 
-                return new ApiResponse { 
+                return new MongoDBConectorResponse { 
                     Success = true, 
                     Data = document.ToJson() 
                 };
             }
             catch (Exception ex)
             {
-                return new ApiResponse { Success = false, Message = $"GetDocumentById failed: {ex.Message}" };
+                return new MongoDBConectorResponse { Success = false, Message = $"GetDocumentById failed: {ex.Message}" };
             }
         }
 
      //   create function CountDocuments 
-        public ApiResponse CountDocuments(MongoConfig config, string filterJson, bool explain)
+        public MongoDBConectorResponse CountDocuments(MongoConfig config, string filterJson, bool explain)
         {
             try
             {
@@ -241,18 +241,18 @@ namespace MongoDB_ODC
                     : new JsonFilterDefinition<BsonDocument>(filterJson);
                 
                 var count = collection.CountDocuments(filter);
-                return new ApiResponse { 
+                return new MongoDBConectorResponse { 
                     Success = true, 
                     Data = explain ? count.ToJson() : count.ToString() 
                 };
             }
             catch (Exception ex)
             {
-                return new ApiResponse { Success = false, Message = $"CountDocuments failed: {ex.Message}" };
+                return new MongoDBConectorResponse { Success = false, Message = $"CountDocuments failed: {ex.Message}" };
             }
         }
 
-        public ApiResponse IsDocumentExist(MongoConfig config, string filterJson)
+        public MongoDBConectorResponse IsDocumentExist(MongoConfig config, string filterJson)
         {
             try
             {
@@ -261,14 +261,15 @@ namespace MongoDB_ODC
                 var filter = new JsonFilterDefinition<BsonDocument>(filterJson);
                 
                 var document = collection.Find(filter).FirstOrDefault();
-                return new ApiResponse { 
-                    Success = document != null, 
-                    Data = document?.ToJson() 
+                return new MongoDBConectorResponse
+                {
+                    Success = document != null,
+                    Data = document?.ToJson() ?? ""
                 };
             }
             catch (Exception ex)
             {
-                return new ApiResponse { Success = false, Message = $"IsDocumentExist failed: {ex.Message}" };
+                return new MongoDBConectorResponse { Success = false, Message = $"IsDocumentExist failed: {ex.Message}" };
             }   
         }
 private IMongoDatabase GetDatabase(MongoConfig config)

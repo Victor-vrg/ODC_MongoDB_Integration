@@ -43,10 +43,10 @@ namespace MongoDB_ODC.helpers
             }
         }
 
-        public static ApiResponse HandleException(Exception ex, string operation)
+        public static MongoDBConectorResponse HandleException(Exception ex, string operation)
         {
             Console.WriteLine($"{operation} error: {ex.Message}");
-            return new ApiResponse(
+            return new MongoDBConectorResponse(
                 success: false,
                 message: $"{operation} failed: {ex.Message}",
                 data: null
