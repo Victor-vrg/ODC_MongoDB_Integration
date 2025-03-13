@@ -1,141 +1,100 @@
-# AI Development Guide for MongoDB Integration
+# AI Guide for High Performance MongoDB Integration
 
-## Overview
+## Repository Overview
 
-This guide outlines best practices and patterns for developing AI-powered applications that integrate with MongoDB. It provides structured approaches for prompt engineering, error handling, and maintaining consistency across the application.
+```mermaid
+graph TD
+    A[IMongoDB] -->|Implements| B[MongoDBService.cs]
+    B -->|Uses| C[MongoConfig]
+    B -->|Returns| D[MongoDBConectorResponse]
+    C -->|Configura| E[Conexão Segura]
+    E -->|Pooling| F[MongoClient]
+    F -->|Operações| G[CRUD MongoDB]
+```
 
----
+## Core Structures
 
-## Prompt Engineering Principles
+```csharp
+// MongoConfig (actual implementation)
+public class MongoConfig {
+    public string ConnectionString { get; set; }
+    public string DatabaseName { get; set; }
+    public string CollectionName { get; set; }
+    public int? MaxPoolSize { get; set; }
+    public bool? UseSSL { get; set; }
+}
 
-### 1. Clear Objective
+// MongoDBConectorResponse (actual response format)
+public class MongoDBConectorResponse {
+    public bool Success { get; set; }
+    public string Message { get; set; }
+    public string Data { get; set; }
+}
+```
 
-- **Definition**: Define a clear objective for each prompt to ensure focused responses.
+## Prompt Engineering Templates
 
-- **Example**:
+### 1. Contextual Code Generation
 
-  ```plaintext
-  "Explain the process to update a document in MongoDB, including error handling and logging."
-  ```
+```plaintext
+"Create a paginated query method that:
+1. Uses MongoConfig for configuration
+2. Implements skip/limit according to Demo_MongoDB_Conector
+3. Returns MongoDBConectorResponse with TotalCount
+4. Includes standard error handling from the repository"
+```
 
-### 2. Specificity
+### 2. Performance Analysis
 
-- **Guidance**: Be specific about the required format and structure of the response.
+```plaintext
+"Optimize connection in method X considering:
+- Connection pool size (MaxPoolSize)
+- Connection timeout
+- TLS/SSL usage
+```
 
-  ```plaintext
-  "Provide a step-by-step explanation in Markdown format with code examples."
-  ```
 
-### 3. Contextual Awareness
+## Proven Patterns (From MongoDBService.cs)
 
-- **Importance**: Include relevant context to guide the AI in generating accurate responses.
+### Optimized Connection
 
-  ```plaintext
-  "Assume you are working with .NET 8.0 and MongoDB.Driver version 2.x."
-  ```
+```csharp
+public IMongoDatabase GetDatabase(MongoConfig config) {
+    var settings = MongoClientSettings.FromConnectionString(config.ConnectionString);
+    settings.MaxConnectionPoolSize = config.MaxPoolSize ?? 100;
+    settings.SocketTimeout = TimeSpan.FromSeconds(30);
+    settings.ConnectTimeout = TimeSpan.FromSeconds(15);
+    settings.UseTls = config.UseSSL ?? true;
+    return new MongoClient(settings).GetDatabase(config.DatabaseName);
+}
+```
 
-### 4. Iterative Refinement
-
-- **Process**:
-  1. Start with a broad prompt.
-  2. Use follow-up prompts to refine the response.
-  3. Request specific details or formats as needed.
-
----
-
-## Development Patterns
-
-### 1. Error Handling
+### Standard Error Handling
 
 ```csharp
 try {
-    // MongoDB Operation
-    var result = await collection.UpdateOneAsync(filter, update);
-    return new ApiResponse {
-        Success = result.IsAcknowledged,
-        Message = $"Updated {result.ModifiedCount} documents"
-    };
-} catch (Exception ex) {
-    return new ApiResponse {
+    var database = GetDatabase(config);
+    var collection = database.GetCollection<BsonDocument>(config.CollectionName);
+    // Operação MongoDB
+    return new MongoDBConectorResponse { Success = true, Data = result };
+}
+catch (MongoException ex) {
+    return new MongoDBConectorResponse {
         Success = false,
-        Message = $"Update failed: {ex.Message}",
+        Message = $"MongoDB failure: {ex.Message}",
+        Data = ex.ErrorLabels,
         StatusCode = 500
     };
 }
 ```
 
-### 2. Response Structure
+## AI Implementation Checklist
 
-- **Standard Response Model**:
-
-  ```csharp
-  public class ApiResponse {
-      public bool Success { get; set; }
-      public string Message { get; set; }
-      public object Data { get; set; }
-      public int StatusCode { get; set; }
-  }
-  ```
-
-### 3. Query Patterns
-
-- **Basic Find**:
-
-  ```csharp
-  var filter = Builders<BsonDocument>.Filter.Empty;
-  var documents = await collection.FindAsync(filter);
-  ```
-
-- **Filtered Query**:
-
-  ```csharp
-  var filter = Builders<BsonDocument>.Filter.Eq("field", "value");
-  var cursor = await collection.FindAsync(filter);
-  ```
-
-### 4. Connection Management
-
-- **MongoClient Instance**:
-
-  ```csharp
-  private readonly MongoClient _mongoClient;
-  
-  public MongoDBService(MongoConfig config) {
-      _mongoClient = new MongoClient(config.ConnectionString);
-  }
-  ```
-
----
-
-## Best Practices
-
-1. **Parameter Validation**
-
-- Validate all input parameters before executing MongoDB operations.
-- Ensure proper type checking and range validation.
-
-2. **Indexing**
-
-- Implement appropriate indexes for frequently queried fields.
-- Use explain() to analyze query performance.
-
-3. **Caching**
-
-- Implement connection pooling for MongoDB clients.
-- Cache frequently accessed data to reduce database load.
-
-4. **Logging**
-
-- Log important operations and errors.
-- Include relevant metadata for debugging.
-
-5. **Security**
-
-- Use secure connection strings.
-- Implement proper access controls.
-
----
-
-## Conclusion
-
-This guide provides a foundation for developing robust AI applications integrated with MongoDB. By following these principles and patterns, developers can build efficient, maintainable, and scalable solutions.
+1. ✅ Use IMongoDB interfaces
+2. ✅ Validate MongoConfig before use
+3. ✅ Follow MongoDBConectorResponse pattern
+4. ✅ Implement connection pooling
+5. ✅ Enable TLS/SSL by default
+6. ✅ Log errors with ErrorLabels
+7. ✅ Use synchronous methods
+8. ✅ Maintain stateless functions
