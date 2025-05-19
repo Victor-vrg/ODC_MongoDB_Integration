@@ -24,14 +24,29 @@ namespace MongoDB_ODC
             Description = "Dados retornados (JSON)",
             IsMandatory = false
         )]
-        public string Data { get; set; } // Propriedade com get/set
-    // esse padrão e melhor para lidar no outsytems recebendo o objeto via string para deserializar lá
-   public MongoDBConectorResponse(bool success, string message, string? data = null)
-{
-    Success = success;
-    Message = message;
-    Data = data ?? string.Empty; // Evita null para compatibilidade
-}
+        public string Data { get; set; }
+
+        [OSStructureField(
+            DataType = OSDataType.Text,
+            Description = "ID da sessão de transação ativa",
+            IsMandatory = false
+        )]
+        public string SessionId { get; set; }
+
+        [OSStructureField(
+            DataType = OSDataType.Boolean,
+            Description = "Indica se há transação pendente",
+            IsMandatory = false
+        )]
+        public bool TransactionPending { get; set; }
+
+        public MongoDBConectorResponse(bool success, string message, string? data = null, string? sessionId = null, bool transactionPending = false)
+        {
+            Success = success;
+            Message = message;
+            Data = data ?? string.Empty;
+            SessionId = sessionId ?? string.Empty;
+            TransactionPending = transactionPending;
+        }
     }
 }
-

@@ -1,6 +1,6 @@
 using OutSystems.ExternalLibraries.SDK;
 
-namespace MongoDB_ODC 
+namespace MongoDB_Integration.structures
 {
     [OSStructure(Description = "Configuração avançada de conexão MongoDB")]
     public struct MongoConfig 
@@ -22,6 +22,15 @@ namespace MongoDB_ODC
 
         [OSStructureField(DataType = OSDataType.Boolean, Description = "Habilita SSL", IsMandatory = false, DefaultValue = "True")]
         public bool? UseSSL { get; set; }
+
+        [OSStructureField(DataType = OSDataType.Integer, Description = "Timeout padrão para transações em segundos", IsMandatory = false, DefaultValue = "30")]
+        public int TransactionDefaultTimeout { get; set; } = 30;
+
+        [OSStructureField(DataType = OSDataType.Boolean, Description = "Habilita commit automático de transações", IsMandatory = false, DefaultValue = "True")]
+        public bool AutoCommitTransactions { get; set; } = true;
+
+        [OSStructureField(DataType = OSDataType.Integer, Description = "Tamanho do lote para operações em massa", IsMandatory = false, DefaultValue = "1000")]
+        public int BulkWriteBatchSize { get; set; } = 1000;
 
         public MongoConfig(
             string connectionString,

@@ -2,24 +2,58 @@ using MongoDB.Driver;
 using MongoDB.Bson;
 using ODC_Mongo.helpers;
 using MongoDB.Bson.Serialization;
+using MongoDB_Integration.structures;
+using MongoDB_ODC.Helpers;
 
 namespace MongoDB_ODC
 {
     public class MongoDBService : IMongoDB
     {
-        public MongoDBConectorResponse CreateDocument(MongoConfig config, string documentJson)
+
+        /// <summary>
+        /// Commit transaction
+        /// </summary>
+        /// <param name="config">MongoDB configuration</param>
+        /// <param name="sessionId">Session id</param>
+        /// <returns>MongoDB response</returns>
+        public MongoDBConectorResponse MongoDBCommitTransaction(MongoConfig config, string sessionId)
+        {
+            return MongoTransactionManager.CommitTransactionAction(sessionId);
+        }
+
+        public MongoDBConectorResponse MongoDBAbortTransaction(MongoConfig config, string sessionId)
+        {
+            return MongoTransactionManager.AbortTransactionAction(sessionId);
+        }
+
+
+        public MongoDBConectorResponse CreateDocument(MongoConfig config, string documentJson, string? sessionId = null)
         {
             try
             {
-                var database = GetDatabase(config);
-                var collection = database.GetCollection<BsonDocument>(config.CollectionName);
+                var client = new MongoClient(config.ConnectionString);
+                var db = client.GetDatabase(config.DatabaseName);
+                var collection = db.GetCollection<BsonDocument>(config.CollectionName);
                 var document = BsonDocument.Parse(documentJson);
-                collection.InsertOne(document);
-                return new MongoDBConectorResponse { Success = true, Message = "Document created successfully" };
+
+                IClientSessionHandle? session = null;
+                string newSessionId = string.Empty;
+
+                if (!config.AutoCommitTransactions || !string.IsNullOrEmpty(sessionId))
+                {
+                    (session, newSessionId) = MongoTransactionManager.GetOrCreateSession(client, sessionId, config.TransactionDefaultTimeout);
+                    collection.InsertOne(session, document);
+                    return new MongoDBConectorResponse(true, "Documento criado com transação pendente", null, newSessionId, true);
+                }
+                else
+                {
+                    collection.InsertOne(document);
+                    return new MongoDBConectorResponse(true, "Documento criado com commit automático");
+                }
             }
             catch (Exception ex)
             {
-                return new MongoDBConectorResponse { Success = false, Message = $"Create failed: {ex.Message}" };
+                return new MongoDBConectorResponse(false, $"Erro: {ex.Message}");
             }
         }
 
@@ -71,50 +105,83 @@ namespace MongoDB_ODC
         }
 
 
-        public MongoDBConectorResponse UpdateDocument(MongoConfig config, string filterJson, string updateJson)
+        public MongoDBConectorResponse UpdateDocument(MongoConfig config, string filterJson, string updateJson, string? sessionId = null)
         {
             try
             {
-                var database = GetDatabase(config);
-                var collection = database.GetCollection<object>(config.CollectionName);
-                var filter = new JsonFilterDefinition<object>(filterJson);
-                var update = new JsonUpdateDefinition<object>(updateJson);
+                var client = new MongoClient(config.ConnectionString);
+                var db = client.GetDatabase(config.DatabaseName);
+                var collection = db.GetCollection<BsonDocument>(config.CollectionName); // Alterado para BsonDocument
+                var filter = new JsonFilterDefinition<BsonDocument>(filterJson);
+                var update = new JsonUpdateDefinition<BsonDocument>(updateJson);
 
-                var result = collection.UpdateOne(filter, update);
-                return new MongoDBConectorResponse
+                IClientSessionHandle? session = null;
+                string newSessionId = string.Empty;
+
+                // Lógica de transação
+                if (!config.AutoCommitTransactions || !string.IsNullOrEmpty(sessionId))
                 {
-                    Success = result.IsAcknowledged,
-                    Message = $"Modified {result.ModifiedCount} documents"
-                };
+                    (session, newSessionId) = MongoTransactionManager.GetOrCreateSession(client, sessionId, config.TransactionDefaultTimeout);
+                    var result = collection.UpdateOne(session, filter, update); // Passa a sessão
+                    return new MongoDBConectorResponse(
+                        success: result.IsAcknowledged,
+                        message: $"Modified {result.ModifiedCount} documents",
+                        data: null,
+                        sessionId: newSessionId,
+                        transactionPending: true
+                    );
+                }
+                else
+                {
+                    var result = collection.UpdateOne(filter, update);
+                    return new MongoDBConectorResponse(
+                        success: result.IsAcknowledged,
+                        message: $"Modified {result.ModifiedCount} documents (auto-committed)"
+                    );
+                }
             }
             catch (Exception ex)
             {
-                return new MongoDBConectorResponse { Success = false, Message = $"Update failed: {ex.Message}" };
+                return new MongoDBConectorResponse(false, $"Update failed: {ex.Message}");
             }
         }
-
-        public MongoDBConectorResponse DeleteDocument(MongoConfig config, string filterJson)
+        public MongoDBConectorResponse DeleteDocument(MongoConfig config, string filterJson, string? sessionId = null)
         {
             try
             {
-                var database = GetDatabase(config);
-                var collection = database.GetCollection<object>(config.CollectionName);
-                var filter = new JsonFilterDefinition<object>(filterJson);
+                var client = new MongoClient(config.ConnectionString);
+                var db = client.GetDatabase(config.DatabaseName);
+                var collection = db.GetCollection<BsonDocument>(config.CollectionName);
+                var filter = new JsonFilterDefinition<BsonDocument>(filterJson);
 
-                var result = collection.DeleteOne(filter);
-                return new MongoDBConectorResponse
+                IClientSessionHandle? session = null;
+                string newSessionId = string.Empty;
+
+                if (!config.AutoCommitTransactions || !string.IsNullOrEmpty(sessionId))
                 {
-                    Success = result.IsAcknowledged,
-                    Message = $"Deleted {result.DeletedCount} documents"
-                };
+                    (session, newSessionId) = MongoTransactionManager.GetOrCreateSession(client, sessionId, config.TransactionDefaultTimeout);
+                    var result = collection.DeleteOne(session, filter);
+                    return new MongoDBConectorResponse(
+                        success: result.IsAcknowledged,
+                        message: $"Deleted {result.DeletedCount} documents",
+                        sessionId: newSessionId,
+                        transactionPending: true
+                    );
+                }
+                else
+                {
+                    var result = collection.DeleteOne(filter);
+                    return new MongoDBConectorResponse(
+                        success: result.IsAcknowledged,
+                        message: $"Deleted {result.DeletedCount} documents (auto-committed)"
+                    );
+                }
             }
             catch (Exception ex)
             {
-                return new MongoDBConectorResponse { Success = false, Message = $"Delete failed: {ex.Message}" };
+                return new MongoDBConectorResponse(false, $"Delete failed: {ex.Message}");
             }
         }
-
-
         public MongoDBConectorResponse AggregateExplainer(MongoConfig config, string aggregatePipeline, bool verbose)
         {
             try
@@ -149,31 +216,63 @@ namespace MongoDB_ODC
             }
         }
 
-        public MongoDBConectorResponse AggregateCollection(MongoConfig config, string aggregatePipeline)
+        /// <summary>
+        /// Executes an aggregation pipeline on a collection.
+        /// 
+        /// If <paramref name="sessionId"/> is not null, uses a session for the aggregation.
+        /// If <see cref="MongoConfig.AutoCommitTransactions"/> is false, sessions are used for aggregation.
+        /// </summary>
+        /// <param name="config">The MongoDB configuration.</param>
+        /// <param name="aggregatePipeline">The aggregation pipeline as a string.</param>
+        /// <param name="sessionId">The session identifier to use, or null for auto-commit.</param>
+        /// <returns>A <see cref="MongoDBConectorResponse"/> with the result of the aggregation.</returns>
+        public MongoDBConectorResponse AggregateCollection(
+     MongoConfig config,
+     string aggregatePipeline,
+     string? sessionId = null // Adicionado parâmetro opcional
+ )
         {
             try
             {
-                var database = GetDatabase(config);
-                var collection = database.GetCollection<BsonDocument>(config.CollectionName);
+                var client = new MongoClient(config.ConnectionString);
+                var db = client.GetDatabase(config.DatabaseName);
+                var collection = db.GetCollection<BsonDocument>(config.CollectionName);
                 var pipeline = BsonSerializer.Deserialize<BsonDocument[]>(aggregatePipeline);
 
-                var results = collection.Aggregate<BsonDocument>(pipeline).ToList();
-                return new MongoDBConectorResponse
+                IClientSessionHandle? session = null;
+                string newSessionId = string.Empty;
+
+                // Lógica de transação (opcional, mesmo para leitura)
+                if (!config.AutoCommitTransactions || !string.IsNullOrEmpty(sessionId))
                 {
-                    Success = true,
-                    Data = results.ToJson()
-                };
+                    (session, newSessionId) = MongoTransactionManager.GetOrCreateSession(client, sessionId, config.TransactionDefaultTimeout);
+                    var results = collection.Aggregate<BsonDocument>(session, pipeline).ToList(); // Passa a sessão
+                    return new MongoDBConectorResponse(
+                        success: true,
+                        message: "Aggregation successful",
+                        data: results.ToJson(),
+                        sessionId: newSessionId,
+                        transactionPending: true
+                    );
+                }
+                else
+                {
+                    var results = collection.Aggregate<BsonDocument>(pipeline).ToList();
+                    return new MongoDBConectorResponse(
+                        success: true,
+                        message: "Aggregation successful",
+                        data: results.ToJson()
+                    );
+                }
             }
             catch (Exception ex)
             {
-                return new MongoDBConectorResponse
-                {
-                    Success = false,
-                    Message = $"Aggregation failed: {ex.Message}"
-                };
+                return new MongoDBConectorResponse(
+                    success: false,
+                    message: $"Aggregation failed: {ex.Message}"
+                );
             }
         }
-
         public MongoDBConectorResponse GetCollectionStats(MongoConfig config)
         {
             try
