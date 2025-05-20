@@ -28,7 +28,7 @@ namespace MongoDB_ODC
 
         [OSStructureField(
             DataType = OSDataType.Text,
-            Description = "ID da sessão de transação ativa",
+            Description = "ID da sessão de transação ativa.",
             IsMandatory = false
         )]
         public string SessionId { get; set; }

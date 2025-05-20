@@ -29,8 +29,6 @@ namespace MongoDB_Integration.structures
         [OSStructureField(DataType = OSDataType.Boolean, Description = "Habilita commit automático de transações", IsMandatory = false, DefaultValue = "True")]
         public bool AutoCommitTransactions { get; set; } = true;
 
-        [OSStructureField(DataType = OSDataType.Integer, Description = "Tamanho do lote para operações em massa", IsMandatory = false, DefaultValue = "1000")]
-        public int BulkWriteBatchSize { get; set; } = 1000;
 
         public MongoConfig(
             string connectionString,

@@ -57,6 +57,63 @@ namespace MongoDB_ODC
             }
         }
 
+
+        public MongoDBConectorResponse BulkInsertDocuments(MongoConfig config, string documentsJson, int batchSize, string? sessionId = null)
+        {
+            try
+            {
+                var client = new MongoClient(config.ConnectionString);
+                var db = client.GetDatabase(config.DatabaseName);
+                var collection = db.GetCollection<BsonDocument>(config.CollectionName);
+
+                if (!BsonSerializer.Deserialize<BsonValue>(documentsJson).IsBsonArray)
+                    return new MongoDBConectorResponse(false, "JSON inválido. Esperado um array de documentos.");
+
+                var array = BsonSerializer.Deserialize<BsonArray>(documentsJson);
+                var documents = array.OfType<BsonDocument>().ToList();
+
+                if (!documents.Any())
+                    return new MongoDBConectorResponse(false, "A lista de documentos está vazia.");
+
+                if (batchSize <= 0)
+                    return new MongoDBConectorResponse(false, "O tamanho do lote deve ser maior que zero.");
+
+                var batches = documents
+                    .Select((doc, idx) => new { doc, idx })
+                    .GroupBy(x => x.idx / batchSize)
+                    .Select(g => g.Select(x => x.doc).ToList())
+                    .ToList();
+
+                IClientSessionHandle? session = null;
+                string finalSessionId = sessionId ?? string.Empty;
+                var options = new InsertManyOptions { IsOrdered = false };
+
+                if (!config.AutoCommitTransactions || !string.IsNullOrEmpty(sessionId))
+                {
+                    (session, finalSessionId) = MongoTransactionManager.GetOrCreateSession(client, sessionId, config.TransactionDefaultTimeout);
+
+                    foreach (var batch in batches)
+                        collection.InsertMany(session, batch, options);
+                }
+                else
+                {
+                    foreach (var batch in batches)
+                        collection.InsertMany(batch, options);
+                }
+
+                return new MongoDBConectorResponse(true, $"Inseridos {documents.Count} documentos com sucesso", null, finalSessionId, session != null);
+            }
+            catch (MongoBulkWriteException ex)
+            {
+                var errorDetails = string.Join("; ", ex.WriteErrors.Select(e => e.Message));
+                return new MongoDBConectorResponse(false, $"Erro parcial no bulk insert: {errorDetails}");
+            }
+            catch (Exception ex)
+            {
+                return new MongoDBConectorResponse(false, $"Erro no Bulk Insert: {ex.Message}");
+            }
+        }
+
         public MongoDBConectorResponse GetDocuments(MongoConfig config, string filterJson)
         {
             try
@@ -122,7 +179,7 @@ namespace MongoDB_ODC
                 if (!config.AutoCommitTransactions || !string.IsNullOrEmpty(sessionId))
                 {
                     (session, newSessionId) = MongoTransactionManager.GetOrCreateSession(client, sessionId, config.TransactionDefaultTimeout);
-                    var result = collection.UpdateOne(session, filter, update); // Passa a sessão
+                    var result = collection.UpdateOne(session, filter, update); 
                     return new MongoDBConectorResponse(
                         success: result.IsAcknowledged,
                         message: $"Modified {result.ModifiedCount} documents",

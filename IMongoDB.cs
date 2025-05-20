@@ -22,8 +22,8 @@ Ideal for dynamic apps, data analysis, and large dataset management. 🚀", Name
         MongoDBConectorResponse CreateDocument(
             [OSParameter(Description = "Mongo Configuration")] MongoConfig config,
             [OSParameter(Description = "JSON document to insert. ex: { name: 'John', age: 30 }")] string documentJson,
-            [OSParameter(Description = "ID da sessão (opcional, para controle de transação)")]string? sessionId = null);
-            
+            [OSParameter(Description = "Session ID (optional, for transaction control)")] string? sessionId = null);
+
 
         [OSAction(Description = "Retrieves documents from a MongoDB collection based on a filter")]
         MongoDBConectorResponse GetDocuments(
@@ -41,13 +41,13 @@ Ideal for dynamic apps, data analysis, and large dataset management. 🚀", Name
             [OSParameter(Description = "Mongo Configuration")] MongoConfig config,
             [OSParameter(Description = "JSON filter for documents to update. ex: { name: 'John' }")] string filterJson,
             [OSParameter(Description = "JSON update definition. ex: { $set: { age: 31 } }")] string updateJson,
-            [OSParameter(Description = "ID da sessão (opcional, para controle de transação)")]string? sessionId = null);
+            [OSParameter(Description = "Session ID (optional, for transaction control)")] string? sessionId = null);
 
         [OSAction(Description = "Deletes documents from a MongoDB collection based on a filter")]
         MongoDBConectorResponse DeleteDocument(
             [OSParameter(Description = "Mongo Configuration")] MongoConfig config,
             [OSParameter(Description = "JSON filter for documents to delete")] string filterJson,
-            [OSParameter(Description = "ID da sessão (opcional, para controle de transação)")]string? sessionId = null);
+            [OSParameter(Description = "Session ID (optional, for transaction control)")] string? sessionId = null);
 
         [OSAction(Description = "Returns the explain plan for an aggregation operation in MongoDB")]
         MongoDBConectorResponse AggregateExplainer(
@@ -59,8 +59,8 @@ Ideal for dynamic apps, data analysis, and large dataset management. 🚀", Name
         MongoDBConectorResponse AggregateCollection(
             [OSParameter(Description = "Mongo Configuration")] MongoConfig config,
             [OSParameter(Description = "Aggregation pipeline as JSON. Ex: [{ \"$match\": { \"status\": \"A\" } }, { \"$group\": { \"_id\": \"$category\", \"total\": { \"$sum\": \"$amount\" } } }]")] string aggregatePipeline,
-            [OSParameter(Description = "ID da sessão (opcional, para controle de transação)")]string? sessionId = null);
-            
+            [OSParameter(Description = "Session ID (optional, for transaction control)")] string? sessionId = null);
+
 
         [OSAction(Description = "Retrieves statistics for a MongoDB collection")]
         MongoDBConectorResponse GetCollectionStats(
@@ -90,14 +90,20 @@ Ideal for dynamic apps, data analysis, and large dataset management. 🚀", Name
 
         [OSAction(Description = "Comita uma transação aberta")]
         MongoDBConectorResponse MongoDBCommitTransaction(
-            [OSParameter(Description = "Configuração MongoDB")] MongoConfig config,
-            [OSParameter(Description = "ID da sessão de transação")] string sessionId);
+            [OSParameter(Description = "Mongo Configuration")] MongoConfig config,
+            [OSParameter(Description = "Session ID (optional, for transaction control)")] string sessionId);
 
         [OSAction(Description = "Aborta uma transação aberta")]
         MongoDBConectorResponse MongoDBAbortTransaction(
-            [OSParameter(Description = "Configuração MongoDB")] MongoConfig config,
-            [OSParameter(Description = "ID da sessão de transação")] string sessionId);
+            [OSParameter(Description = "Mongo Configuration")] MongoConfig config,
+            [OSParameter(Description = "Session ID (optional, for transaction control)")] string sessionId);
 
+        [OSAction(Description = "Batch inserts multiple documents into a MongoDB collection")]
+        MongoDBConectorResponse BulkInsertDocuments(
+            [OSParameter(Description = "MongoDB Configuration")] MongoConfig config,
+            [OSParameter(Description = "JSON list of documents")] string documentsJson,
+            [OSParameter(Description = "Batch size")] int batchSize,
+            [OSParameter(Description = "Transaction session ID (optional)")] string? sessionId = null);
 
     }
 }

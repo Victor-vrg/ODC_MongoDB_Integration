@@ -7,20 +7,20 @@ namespace MongoDB_ODC.Helpers
     public static class MongoTransactionManager
     {
         private static readonly ConcurrentDictionary<string, IClientSessionHandle> Sessions = new();
-        private static readonly TimeSpan DefaultSessionTTL = TimeSpan.FromMinutes(5);
         private static readonly ConcurrentDictionary<string, DateTime> SessionExpirations = new();
+        private static readonly TimeSpan DefaultSessionTTL = TimeSpan.FromMinutes(5);
 
         public static (IClientSessionHandle Session, string SessionId) GetOrCreateSession(MongoClient client, string? sessionId, int timeoutSeconds)
         {
+            if (timeoutSeconds <= 0)
+                timeoutSeconds = (int)DefaultSessionTTL.TotalSeconds;
+
             if (!string.IsNullOrEmpty(sessionId) && Sessions.TryGetValue(sessionId, out var existingSession))
             {
-                // Verifica expiração
                 if (SessionExpirations.TryGetValue(sessionId, out var expiresAt) && expiresAt > DateTime.UtcNow)
                 {
                     return (existingSession, sessionId);
                 }
-
-                // Expirou
                 RemoveSession(sessionId);
             }
 
@@ -38,9 +38,18 @@ namespace MongoDB_ODC.Helpers
             if (Sessions.TryRemove(sessionId, out var session))
             {
                 SessionExpirations.TryRemove(sessionId, out _);
-                session.CommitTransaction();
-                session.Dispose();
-                message = "Transação comitada.";
+                try
+                {
+                    session.CommitTransaction();
+                    message = "Transação comitada.";
+                }
+                catch (Exception ex)
+                {
+                    message = $"Erro ao comitar: {ex.Message}";
+                    return false;
+                }
+
+                try { session.Dispose(); } catch { /* Proteção contra Dispose duplo */ }
                 return true;
             }
 
@@ -53,9 +62,18 @@ namespace MongoDB_ODC.Helpers
             if (Sessions.TryRemove(sessionId, out var session))
             {
                 SessionExpirations.TryRemove(sessionId, out _);
-                session.AbortTransaction();
-                session.Dispose();
-                message = "Transação abortada.";
+                try
+                {
+                    session.AbortTransaction();
+                    message = "Transação abortada.";
+                }
+                catch (Exception ex)
+                {
+                    message = $"Erro ao abortar: {ex.Message}";
+                    return false;
+                }
+
+                try { session.Dispose(); } catch { /* Proteção contra Dispose duplo */ }
                 return true;
             }
 
@@ -67,14 +85,13 @@ namespace MongoDB_ODC.Helpers
         {
             if (Sessions.TryRemove(sessionId, out var session))
             {
-                session.Dispose();
+                try { session.Dispose(); } catch { }
                 SessionExpirations.TryRemove(sessionId, out _);
             }
         }
 
-         public static MongoDBConectorResponse CommitTransactionAction(string sessionId)
+        public static MongoDBConectorResponse CommitTransactionAction(string sessionId)
         {
-            var config = new MongoDBConectorResponse();
             if (CommitTransaction(sessionId, out var message))
             {
                 return new MongoDBConectorResponse(true, message);
@@ -84,7 +101,6 @@ namespace MongoDB_ODC.Helpers
 
         public static MongoDBConectorResponse AbortTransactionAction(string sessionId)
         {
-            var config = new MongoDBConectorResponse();
             if (AbortTransaction(sessionId, out var message))
             {
                 return new MongoDBConectorResponse(true, message);
